@@ -282,9 +282,20 @@ export default class StageMgr extends cc.Component {
 
     restart() {
         cc.audioEngine.stopAll();
+        // Ensure stageChoice is set to the current stage (worldNum) so LoadScene
+        // can reload the correct stage even if ChooseStage was bypassed or the
+        // game-over flow cleared state.
+        StageMgr.stageChoice = this.worldNum;
+        // The game-over path sets playMode to 'None' before loading GameOver.
+        // If the player clicks Restart after that happens (e.g. during the death
+        // animation), LoadScene would see mode='None' and redirect to ChooseStage
+        // instead of restarting the current stage.  Restore a valid mode here.
+        if (StageMgr.playMode.mode === 'None') {
+            StageMgr.playMode = { mode: 'Single' };
+        }
         this.scheduleOnce(() => {
             cc.director.loadScene('LoadStage');
-        })
+        });
     }
 
     volumeUp() {
