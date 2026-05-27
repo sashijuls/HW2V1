@@ -9758,7 +9758,7 @@
     },
     "component": "",
     "_componentId": "2c686Hl+mVJsK79Y61HYyBY",
-    "handler": "pauseOrResume",
+    "handler": "togglePause",
     "customEventData": ""
   },
   {
@@ -10044,7 +10044,7 @@
     },
     "component": "",
     "_componentId": "2c686Hl+mVJsK79Y61HYyBY",
-    "handler": "restart",
+    "handler": "restartCurrentStage",
     "customEventData": ""
   },
   {
@@ -10332,7 +10332,7 @@
     },
     "component": "",
     "_componentId": "2c686Hl+mVJsK79Y61HYyBY",
-    "handler": "volumeUp",
+    "handler": "increaseVolume",
     "customEventData": ""
   },
   {
@@ -10620,7 +10620,7 @@
     },
     "component": "",
     "_componentId": "2c686Hl+mVJsK79Y61HYyBY",
-    "handler": "volumeDown",
+    "handler": "decreaseVolume",
     "customEventData": ""
   },
   {
