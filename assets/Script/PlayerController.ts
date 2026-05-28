@@ -10,70 +10,50 @@ import StageController from "./StageController";
 
 const { ccclass, property } = cc._decorator;
 
-/**
- * Controls a single player character.
- *
- * Each instance represents one player in either single-player or
- * local-multiplayer mode.  The first player is set up via
- * setupAsMainPlayer(); additional local players use setupAsLocalPlayer().
- */
+// controls a single player character in single or local-multiplayer mode
 @ccclass
 export default class PlayerController extends cc.Component implements MovementRef {
 
-    // ─── Movement constants ───────────────────────────────────────────
-    private static readonly MOVE_SPEED     = 200;
+    // ─── movement constants ───────────────────────────────────────────
+    private static readonly MOVE_SPEED       = 200;
     private static readonly RUN_ACCELERATION = 600;
-    private static readonly JUMP_FORCE     = 850;
+    private static readonly JUMP_FORCE       = 850;
 
-    // ─── Runtime state ────────────────────────────────────────────────
-    /** Unique identifier used by StageController to track all active players. */
+    // ─── runtime state ────────────────────────────────────────────────
+    // uid for playerRegistry
     uid: string = 'invalidUID';
 
-    /** True while the death animation is playing (player input is ignored). */
     isPlayingDeathAnimation = false;
 
-    /** Current directional input state (bitflags). */
+    // movement bitflags
     movementState: MovementState = MovementState.IDLE;
 
-    /** True when the player has collected a power mushroom (big-Mario mode). */
+    // big mario state
     isBigMario: boolean = false;
 
-    /** True during the post-respawn grace period — player cannot be hurt. */
+    // invincible (grace period after respawn or power-down)
     isInvincible: boolean = false;
 
-    /**
-     * Number of ground-type colliders currently in contact with the player.
-     * Jump is only allowed when this value is greater than zero.
-     */
+    // count of active ground contacts; jump allowed when > 0
     groundContactCount: number = 0;
 
-    /** True while the player is inside a one-way-platform trigger zone. */
+    // on a pass-through platform
     isStandingOnPassThrough: boolean = false;
 
-    /** True after the player reaches the goal flag. */
+    // reached the flag
     hasWon = false;
 
-    /** Name of the animation that is currently playing. */
     private currentAnimationName: string = null;
-
-    /** Audio ID of the currently playing sound effect (used to avoid overlaps). */
     private currentSoundEffectId: number = null;
-
-    /** World position where this player spawns (or re-spawns after death). */
     private spawnPosition: cc.Vec2 = null;
-
-    /** Cached reference to the cc.Animation component on this node. */
     private animationComponent: cc.Animation = null;
-
-    /** Camera that follows this player. */
     private cameraController: FollowCamera = null;
 
-    /** Keyboard mapping for this player. */
     keyBindings: PlayerKeyBindings = {
         left: -1, right: -1, up: -1, switchCamera: -1,
     };
 
-    // ─── Inspector properties (names must match the scene file) ──────
+    // ─── inspector properties ─────────────────────────────────────────
     @property({ type: cc.Label })
     usernameLabel: cc.Label = null;
 
@@ -95,7 +75,7 @@ export default class PlayerController extends cc.Component implements MovementRe
     @property({ type: cc.AudioClip })
     powerDownClip: cc.AudioClip = null;
 
-    // ─── Lifecycle ────────────────────────────────────────────────────
+    // ─── lifecycle ────────────────────────────────────────────────────
     onLoad() {
         cc.director.getPhysicsManager().enabled = true;
         this.animationComponent = this.getComponent(cc.Animation);
@@ -110,26 +90,22 @@ export default class PlayerController extends cc.Component implements MovementRe
     }
 
     onDestroy() {
-        // Physics contact callbacks are assigned directly on RigidBody instances
-        // (not via cc.systemEvent), so no listener cleanup is required here.
+        // no listener cleanup needed (callbacks are on RigidBody directly)
     }
 
     update(dt: number) {
-        // isPlayingDeathAnimation is re-evaluated from the animation state each frame.
+        // re-check from anim state each frame
         this.isPlayingDeathAnimation =
             this.animationComponent.getAnimationState('MarioDead').isPlaying;
 
-        if (this.hasWon || this.isPlayingDeathAnimation) {
-            return; // freeze player input during victory/death animations
-        }
+        if (this.hasWon || this.isPlayingDeathAnimation) return;
 
         this.updateMovement(dt);
         this.updateAnimation();
     }
 
-    // ─── Initialisation ───────────────────────────────────────────────
+    // ─── initialisation ───────────────────────────────────────────────
 
-    /** Set this player up as the main (player 1) character. */
     setupAsMainPlayer(camera: FollowCamera) {
         this.keyBindings = { ...StageController.LOCAL_KEY_BINDINGS[0] };
         this.cameraController = camera;
@@ -137,7 +113,6 @@ export default class PlayerController extends cc.Component implements MovementRe
         this.usernameLabel.string = 'PLAYER';
     }
 
-    /** Set this player up as an additional local player. */
     setupAsLocalPlayer(
         username: string,
         keyBindings: PlayerKeyBindings,
@@ -149,9 +124,8 @@ export default class PlayerController extends cc.Component implements MovementRe
         this.usernameLabel.string = username.toUpperCase();
     }
 
-    // ─── Movement & animation ─────────────────────────────────────────
+    // ─── movement & animation ─────────────────────────────────────────
 
-    /** Read the current movementState and apply physics forces. */
     updateMovement(dt: number) {
         const rigidBody = this.getComponent(cc.RigidBody);
         let horizontalVelocity: number;
@@ -159,10 +133,10 @@ export default class PlayerController extends cc.Component implements MovementRe
         switch (this.movementState) {
         case MovementState.UP_LEFT:
             this.attemptJump(rigidBody);
-            // fall through to apply left movement
+            // fall through
         case MovementState.LEFT:
             if (rigidBody.linearVelocity.x > 0) {
-                // Turning: preserve current speed while decelerating
+                // decelerating (turning)
                 horizontalVelocity = rigidBody.linearVelocity.x;
             } else {
                 horizontalVelocity = rigidBody.linearVelocity.x - PlayerController.RUN_ACCELERATION * dt;
@@ -174,7 +148,7 @@ export default class PlayerController extends cc.Component implements MovementRe
 
         case MovementState.UP_RIGHT:
             this.attemptJump(rigidBody);
-            // fall through to apply right movement
+            // fall through
         case MovementState.RIGHT:
             if (rigidBody.linearVelocity.x < 0) {
                 horizontalVelocity = rigidBody.linearVelocity.x;
@@ -196,7 +170,6 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    /** Choose the correct animation frame based on velocity and movementState. */
     updateAnimation() {
         const rigidBody = this.getComponent(cc.RigidBody);
         const vx = rigidBody.linearVelocity.x;
@@ -223,15 +196,14 @@ export default class PlayerController extends cc.Component implements MovementRe
             this.playAnimation('MarioJump', this.jumpClip);
             break;
         case MovementState.IDLE:
-            if (vx !== 0)               { this.playAnimation('MarioStop'); }
+            if (vx !== 0)                     { this.playAnimation('MarioStop'); }
             else if (this.groundContactCount) { this.playAnimation('MarioIdle'); }
             break;
         }
     }
 
-    // ─── Animation helpers ────────────────────────────────────────────
+    // ─── animation helpers ────────────────────────────────────────────
 
-    /** Play a named animation, optionally with a one-shot sound effect. */
     playAnimation(animationName: string, soundClip?: cc.AudioClip) {
         const playIfNotAlready = (name: string) => {
             this.currentAnimationName = name;
@@ -253,7 +225,6 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    /** Play a sound effect without overlapping an already-playing one. */
     playSoundEffect(clip: cc.AudioClip) {
         if (cc.audioEngine.getState(this.currentSoundEffectId) !==
                 cc.audioEngine.AudioState.PLAYING) {
@@ -261,9 +232,8 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    // ─── Movement helpers ─────────────────────────────────────────────
+    // ─── movement helpers ─────────────────────────────────────────────
 
-    /** Jump only if the player is currently touching the ground. */
     attemptJump(rigidBody: cc.RigidBody, overrideX?: number) {
         if (this.groundContactCount) {
             rigidBody.linearVelocity = cc.v2(
@@ -273,27 +243,23 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    /** Flip the sprite so it faces left. */
     faceLeft() {
         this.usernameLabel.node.scaleX = -Math.abs(this.usernameLabel.node.scaleX);
         this.node.scaleX = -Math.abs(this.node.scaleX);
     }
 
-    /** Flip the sprite so it faces right. */
     faceRight() {
         this.usernameLabel.node.scaleX = Math.abs(this.usernameLabel.node.scaleX);
         this.node.scaleX = Math.abs(this.node.scaleX);
     }
 
-    // ─── Power-up / hurt states ───────────────────────────────────────
+    // ─── power-up / hurt states ───────────────────────────────────────
 
-    /** Play a rapid blink animation (used for power-up and invincibility). */
     playBlinkEffect() {
         const blinkAction = cc.spawn(cc.blink(1, 8), cc.flipX(true));
         this.node.runAction(blinkAction);
     }
 
-    /** Grow Mario to the big-Mario state if not already big. */
     applyPowerUp() {
         if (!this.isBigMario) {
             this.isBigMario = true;
@@ -306,7 +272,6 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    /** Shrink Mario back to small-Mario if currently big. */
     applyPowerDown() {
         if (this.isBigMario) {
             this.isBigMario = false;
@@ -318,10 +283,6 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    /**
-     * Play the death animation followed by an optional callback.
-     * Disables the physics collider and stops music while playing.
-     */
     playDeathAnimation(onAnimationFinished?: () => void) {
         this.getComponent(cc.RigidBody).linearVelocity = cc.v2(0, 1000);
         this.playAnimation('MarioDead');
@@ -334,10 +295,6 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    /**
-     * Handle losing one life: power-down if big, otherwise play the death
-     * animation and then respawn at the spawn position.
-     */
     playDeathAndRespawn() {
         if (this.isBigMario) {
             this.applyPowerDown();
@@ -348,15 +305,11 @@ export default class PlayerController extends cc.Component implements MovementRe
                 this.faceLeft();
                 this.node.setPosition(this.spawnPosition);
                 cc.audioEngine.playMusic(this.BGM, true);
-                this.activateInvincibility(); // grace period on respawn
+                this.activateInvincibility(); // grace period
             });
         });
     }
 
-    /**
-     * Grant a brief invincibility window (e.g. after respawn or power-down).
-     * The player blinks visually and cannot take damage for 2 seconds.
-     */
     activateInvincibility() {
         this.playBlinkEffect();
         this.isInvincible = true;
@@ -365,7 +318,6 @@ export default class PlayerController extends cc.Component implements MovementRe
         }, 2);
     }
 
-    /** Lock movement and stop velocity when the player reaches the goal. */
     celebrateVictory() {
         this.hasWon = true;
         this.movementState = MovementState.IDLE;
@@ -373,7 +325,7 @@ export default class PlayerController extends cc.Component implements MovementRe
         rigidBody.linearVelocity = cc.v2(0, 0);
     }
 
-    // ─── Input handlers ───────────────────────────────────────────────
+    // ─── input handlers ───────────────────────────────────────────────
 
     onKeyDown(event: cc.Event.EventKeyboard) {
         switch (event.keyCode) {
@@ -394,7 +346,7 @@ export default class PlayerController extends cc.Component implements MovementRe
         }
     }
 
-    // ─── Physics contact callbacks ────────────────────────────────────
+    // ─── physics contact callbacks ────────────────────────────────────
 
     onBeginContact(
         contact: cc.PhysicsContact,
@@ -408,7 +360,7 @@ export default class PlayerController extends cc.Component implements MovementRe
             break;
 
         case CollisionTag.ONE_WAY_PLATFORM:
-            // Disable contact from the sides and from below; only land from above.
+            // solid from above only
             if (Math.abs(contact.getWorldManifold().normal.x) !== 0 ||
                 contact.getWorldManifold().normal.y === 1) {
                 contact.disabled = true;
@@ -418,7 +370,6 @@ export default class PlayerController extends cc.Component implements MovementRe
             break;
 
         case CollisionTag.DEATH_ZONE:
-            // Death zone contact is handled by StageController.
             break;
 
         case CollisionTag.POWER_MUSHROOM:
@@ -428,16 +379,15 @@ export default class PlayerController extends cc.Component implements MovementRe
 
         case CollisionTag.LIFE_MUSHROOM:
             contact.disabled = true;
-            // Life increment is handled by StageController's mushroom contact callback.
             break;
 
         case CollisionTag.PLAYER:
-            contact.disabled = true; // players do not collide with each other
+            contact.disabled = true;
             break;
 
         case CollisionTag.ENEMY:
             if (contact.getWorldManifold().normal.y === -1) {
-                // Stomping an enemy: bounce the player upward.
+                // stomp bounce
                 const rigidBody = this.getComponent(cc.RigidBody);
                 rigidBody.linearVelocity = cc.v2(
                     rigidBody.linearVelocity.x,
@@ -456,7 +406,7 @@ export default class PlayerController extends cc.Component implements MovementRe
     ): void {
         switch (other.tag) {
         case CollisionTag.ONE_WAY_PLATFORM:
-            // Only allow the top surface to be solid.
+            // solid from above only
             if (Math.abs(contact.getWorldManifold().normal.x) !== 0 ||
                 contact.getWorldManifold().normal.y === 1) {
                 contact.disabled = true;

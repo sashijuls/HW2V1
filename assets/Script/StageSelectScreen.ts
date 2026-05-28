@@ -2,18 +2,13 @@ import StageController from "./StageController";
 
 const { ccclass, property } = cc._decorator;
 
-/**
- * Controls the stage-select screen.
- * Buttons on this screen call startSinglePlayerStage() or
- * startMultiplayerStage() with the stage number as customEventData.
- */
+// stage select screen; buttons call startSinglePlayerStage() or startMultiplayerStage()
 @ccclass
 export default class StageSelectScreen extends cc.Component {
 
-    /** Scene name of the loading screen (keeps the magic string in one place). */
     static readonly LOADING_SCENE = 'LoadStage';
 
-    // ─── Inspector-assigned (names must match the scene file) ────────
+    // ─── inspector properties ─────────────────────────────────────────
 
     @property(cc.AudioClip)
     BGM: cc.AudioClip | null = null;
@@ -21,7 +16,7 @@ export default class StageSelectScreen extends cc.Component {
     @property(cc.Node)
     howToPlay: cc.Node | null = null;
 
-    // ─── Lifecycle ────────────────────────────────────────────────────
+    // ─── lifecycle ────────────────────────────────────────────────────
 
     start(): void {
         cc.audioEngine.playMusic(this.BGM, true);
@@ -30,26 +25,17 @@ export default class StageSelectScreen extends cc.Component {
         }
     }
 
-    // ─── Button click handlers (names must match the scene file) ─────
+    // ─── button handlers ──────────────────────────────────────────────
 
-    /**
-     * Start the stage in single-player mode.
-     * Bind to Stage 1 / Stage 2 buttons; set customEventData to "1" or "2".
-     */
+    // set customEventData to "1" or "2" for stage number
     startSinglePlayerStage(_event: cc.Event, stageNumber: string) {
-        StageController.playMode   = { mode: 'Single' };
+        StageController.playMode    = { mode: 'Single' };
         StageController.stageChoice = Number(stageNumber);
         cc.audioEngine.stopMusic();
         cc.director.loadScene(StageSelectScreen.LOADING_SCENE);
     }
 
-    /**
-     * Start the stage in local multiplayer mode.
-     * Bind to multiplayer buttons; set customEventData to the stage number.
-     * The player will be prompted to enter the number of players (1–4).
-     *
-     * NOTE: This method is not yet wired to a scene button.
-     */
+    // set customEventData to stage number; prompts player count (1-4)
     startMultiplayerStage(_event: cc.Event, stageNumber: string) {
         const input = prompt('How many players (1–4)?');
         try {
@@ -67,19 +53,17 @@ export default class StageSelectScreen extends cc.Component {
         }
     }
 
-    /** This handler is called by the scene button — keep this exact name. */
+    // scene button calls this name directly
     loadStage(_event: cc.Event, stageNumber: string) {
         this.startSinglePlayerStage(_event, stageNumber);
     }
 
-    /** Toggle the How-To-Play overlay panel. */
     openHowToPlay() {
         if (this.howToPlay) {
             this.howToPlay.active = !this.howToPlay.active;
         }
     }
 
-    /** Return to the main menu. */
     backToMenu() {
         cc.audioEngine.stopMusic();
         cc.director.loadScene('Menu');

@@ -1,8 +1,4 @@
-/**
- * Keyboard binding configuration for one local player.
- * Each key code maps to a movement action.
- * Used by PlayerController and StageController.
- */
+// keyboard bindings for one local player
 export type PlayerKeyBindings = {
     left: number;
     right: number;

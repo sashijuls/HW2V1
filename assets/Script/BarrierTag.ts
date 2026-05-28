@@ -2,10 +2,7 @@ import { CollisionTag } from "../Function/CollisionTag";
 
 const { ccclass } = cc._decorator;
 
-/**
- * Tags every PhysicsCollider on this node as a BARRIER.
- * Barriers block enemy movement but do not interact with the player.
- */
+// tags all colliders on this node as BARRIER
 @ccclass
 export default class BarrierTag extends cc.Component {
 

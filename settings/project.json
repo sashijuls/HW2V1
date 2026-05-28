@@ -8,14 +8,14 @@
   "group-list": [
     "default"
   ],
-  "start-scene": "7431b32e-166f-4574-a13a-b2f8a5c9e5a3",
+  "start-scene": "5a90440a-0ed5-471f-bd6c-7e3fca93cb62",
   "design-resolution-width": 960,
   "design-resolution-height": 640,
   "fit-width": false,
   "fit-height": true,
   "use-project-simulator-setting": false,
   "simulator-orientation": false,
-  "use-customize-simulator": false,
+  "use-customize-simulator": true,
   "simulator-resolution": {
     "width": 960,
     "height": 640
@@ -31,5 +31,7 @@
     "audience": {
       "enable": false
     }
-  }
+  },
+  "preview-port": 7456,
+  "clear-simulator-cache": true
 }

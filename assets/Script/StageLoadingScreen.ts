@@ -2,15 +2,11 @@ import StageController from "./StageController";
 
 const { ccclass, property } = cc._decorator;
 
-/**
- * Shown briefly while the selected stage loads.
- * Reads the stage choice and play mode set by StageSelectScreen,
- * then transitions automatically after a short delay.
- */
+// brief loading screen between stage select and the stage itself
 @ccclass
 export default class StageLoadingScreen extends cc.Component {
 
-    // ─── Inspector-assigned (names must match the scene file) ────────
+    // ─── inspector properties ─────────────────────────────────────────
 
     @property(cc.Node)
     multiPlayerInfo: cc.Node = null;
@@ -27,24 +23,23 @@ export default class StageLoadingScreen extends cc.Component {
     @property(cc.Button)
     readyButton: cc.Button = null;
 
-    /** Seconds to display the loading screen before switching scenes. */
     @property
     delay = 2;
 
-    // ─── Lifecycle ────────────────────────────────────────────────────
+    // ─── lifecycle ────────────────────────────────────────────────────
 
     start() {
-        // Guard: redirect to stage select if no valid stage has been chosen.
+        // no stage chosen — go back
         if (!StageController.stageChoice ||
                 StageController.playMode.mode === 'None') {
-            cc.log('No stage selected — redirecting to ChooseStage.');
+            cc.log('no stage selected, redirecting');
             this.scheduleOnce(() => {
                 cc.director.loadScene('ChooseStage');
             }, this.delay);
             return;
         }
 
-        // Show multiplayer waiting UI if needed.
+        // multiplayer ui
         switch (StageController.playMode.mode) {
         case 'RemoteMultiple':
             alert('Not implemented');
@@ -61,7 +56,7 @@ export default class StageLoadingScreen extends cc.Component {
 
         this.stageCount.string = StageController.stageChoice.toString();
 
-        // Transition to the selected stage after the delay.
+        // load stage after delay
         this.scheduleOnce(() => {
             cc.director.loadScene(`Stage${StageController.stageChoice}`);
         }, this.delay);

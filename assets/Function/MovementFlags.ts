@@ -1,7 +1,4 @@
-/**
- * Bitflag-based movement state for the player.
- * Multiple directions can be active at once (e.g. UP + LEFT = jump-left).
- */
+// movement state as bitflags
 export enum MovementState {
     IDLE      = 0x0,
     LEFT      = 0x1,   // 001
@@ -11,14 +8,13 @@ export enum MovementState {
     UP_RIGHT  = 0x6,   // 110
 }
 
-/** Any object that holds a MovementState can use the helper functions below. */
 export interface MovementRef {
     movementState: MovementState;
 }
 
 export function beginMoveLeft(ref: MovementRef) {
     ref.movementState |= MovementState.LEFT;
-    endMoveRight(ref); // left and right are mutually exclusive
+    endMoveRight(ref);
 }
 
 export function endMoveLeft(ref: MovementRef) {
@@ -27,7 +23,7 @@ export function endMoveLeft(ref: MovementRef) {
 
 export function beginMoveRight(ref: MovementRef) {
     ref.movementState |= MovementState.RIGHT;
-    endMoveLeft(ref); // left and right are mutually exclusive
+    endMoveLeft(ref);
 }
 
 export function endMoveRight(ref: MovementRef) {

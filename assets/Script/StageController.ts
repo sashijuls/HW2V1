@@ -6,41 +6,28 @@ import FollowCamera from "./FollowCamera";
 
 const { ccclass, property } = cc._decorator;
 
-// ─── Local types ──────────────────────────────────────────────────────────────
-
-/** Which play mode is currently active for this session. */
+// current play mode for this session
 type GameMode = 'None' | 'Single' | 'LocalMultiple' | 'RemoteMultiple';
 
-/** Three kinds of question-box reward, each handled differently. */
+// reward types spawned from question boxes
 enum QuestionBoxReward {
     COIN,
     POWER_MUSHROOM,
     LIFE_MUSHROOM,
 }
 
-// ─── StageController ─────────────────────────────────────────────────────────
-
-/**
- * Main controller for an in-progress stage.
- *
- * Responsibilities:
- *  - Tracks score, lives, coin count, and countdown timer.
- *  - Initialises all enemy and item physics callbacks.
- *  - Handles the pause/resume flow.
- *  - Triggers win/lose transitions.
- */
+// manages score, lives, timer, enemies, and win/lose flow for one stage
 @ccclass
 export default class StageController extends cc.Component {
 
-    // ─── Shared game session data (persist across scene loads) ────────
-    static readonly TIMER_START_VALUE = 300;
+    // ─── shared constants ─────────────────────────────────────────────
+    static readonly TIMER_START_VALUE    = 300;
     static readonly SCORE_DISPLAY_LENGTH = 6;
-    static readonly MUSHROOM_SPEED = 150;
-    static readonly GOOMBA_SPEED = 100;
-    static readonly TURTLE_WALK_SPEED = 70;
-    static readonly TURTLE_SHELL_SPEED = 210;
+    static readonly MUSHROOM_SPEED       = 150;
+    static readonly GOOMBA_SPEED         = 100;
+    static readonly TURTLE_WALK_SPEED    = 70;
+    static readonly TURTLE_SHELL_SPEED   = 210;
 
-    /** Keyboard bindings for up to four local players. */
     static readonly LOCAL_KEY_BINDINGS: PlayerKeyBindings[] = [
         { left: cc.macro.KEY.a,     right: cc.macro.KEY.d,      up: cc.macro.KEY.w, switchCamera: cc.macro.KEY.s },
         { left: cc.macro.KEY.g,     right: cc.macro.KEY.j,      up: cc.macro.KEY.y, switchCamera: cc.macro.KEY.h },
@@ -48,31 +35,26 @@ export default class StageController extends cc.Component {
         { left: cc.macro.KEY.left,  right: cc.macro.KEY.right,  up: cc.macro.KEY.up, switchCamera: cc.macro.KEY.down },
     ];
 
-    /** Which stage to load (set by StageSelectScreen before loading LoadStage). */
+    // set by StageSelectScreen before loading LoadStage
     static stageChoice: number = -1;
-
-    /** Active play mode and optional player-count payload. */
     static playMode: { mode: GameMode; payload?: number } = { mode: 'Single' };
 
-    // ─── Per-run counters (reset in start()) ──────────────────────────
+    // ─── per-run state ────────────────────────────────────────────────
     coinCount: number = 0;
     score: number = 0;
-    /** Lives are shared across all local players. */
     livesRemaining = 5;
     stageTimer: number = StageController.TIMER_START_VALUE;
 
-    // ─── Other runtime state ──────────────────────────────────────────
     stageWon = false;
     currentAudioId: number;
 
     primaryPlayer: PlayerController = null;
-    /** Maps player UID → PlayerController for all active players. */
     playerRegistry: Map<string, PlayerController> = new Map();
 
     isPaused = false;
     pausableComponents: PausableBody[] = [];
 
-    // ─── Inspector-assigned properties (names must match scene file) ──
+    // ─── inspector properties ─────────────────────────────────────────
 
     @property({ type: FollowCamera })
     camera: FollowCamera = null;
@@ -104,7 +86,7 @@ export default class StageController extends cc.Component {
     @property({ type: cc.Label })
     resScoreLabel: cc.Label = null;
 
-    // Global audio clips
+    // audio
     @property({ type: cc.AudioClip })
     coinClip: cc.AudioClip = null;
 
@@ -114,7 +96,7 @@ export default class StageController extends cc.Component {
     @property({ type: cc.AudioClip })
     levelClearClip: cc.AudioClip = null;
 
-    // Scene object references
+    // scene refs
     @property({ type: cc.Node })
     coins: cc.Node = null;
 
@@ -142,7 +124,7 @@ export default class StageController extends cc.Component {
     @property({ type: cc.Node })
     flag: cc.Node = null;
 
-    // Prefabs
+    // prefabs
     @property({ type: cc.Prefab })
     marioPrefab: cc.Prefab = null;
 
@@ -155,13 +137,13 @@ export default class StageController extends cc.Component {
     @property({ type: cc.Prefab })
     healMushroomPrefab: cc.Prefab = null;
 
-    // ─── Lifecycle ────────────────────────────────────────────────────
+    // ─── lifecycle ────────────────────────────────────────────────────
 
     onLoad(): void {
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_UP,   this.onKeyUp,   this);
 
-        // Find the Map node and insert the player prefab just above it.
+        // insert player above the Map node
         let mapIndex = 0;
         for (; mapIndex < this.node.children.length; ++mapIndex) {
             if (this.node.children[mapIndex].name === 'Map') break;
@@ -174,7 +156,7 @@ export default class StageController extends cc.Component {
         this.playerRegistry.set(this.primaryPlayer.uid, this.primaryPlayer);
         this.camera.setFollowTarget(this.primaryPlayer);
 
-        // Spawn additional local players if needed.
+        // extra local players
         switch (StageController.playMode.mode) {
         case 'Single':
             break;
@@ -198,7 +180,6 @@ export default class StageController extends cc.Component {
     }
 
     start() {
-        // Reset all per-run counters.
         this.coinCount = 0;
         this.score = 0;
         this.livesRemaining = 5;
@@ -207,7 +188,7 @@ export default class StageController extends cc.Component {
         this.worldNumLabel.string = this.worldNum.toString();
         this.resultNode.active = false;
 
-        // ── Death zone ────────────────────────────────────────────────
+        // death zone
         this.deadFloor.getComponent(cc.RigidBody).onBeginContact = (
             contact: cc.PhysicsContact,
             selfCollider: cc.PhysicsCollider,
@@ -220,7 +201,7 @@ export default class StageController extends cc.Component {
             }
         };
 
-        // ── Goal flag ─────────────────────────────────────────────────
+        // goal flag
         this.flag.getComponent(cc.RigidBody).onBeginContact = (
             contact: cc.PhysicsContact,
             selfCollider: cc.PhysicsCollider,
@@ -229,7 +210,7 @@ export default class StageController extends cc.Component {
             if (otherCollider.node.name === 'Mario') {
                 const player = otherCollider.node.getComponent(PlayerController);
                 player.celebrateVictory();
-                // Only trigger the stage-complete sequence once all players win.
+                // trigger complete only once all players have won
                 const allPlayersWon = Array.from(this.playerRegistry.values())
                     .every(p => p.hasWon);
                 if (allPlayersWon) {
@@ -238,7 +219,7 @@ export default class StageController extends cc.Component {
             }
         };
 
-        // ── Coins ─────────────────────────────────────────────────────
+        // coins
         for (const coin of this.coins.getComponentsInChildren(cc.Component)) {
             const rigidBody = coin.getComponent(cc.RigidBody);
             rigidBody.onBeginContact = (
@@ -255,7 +236,7 @@ export default class StageController extends cc.Component {
             };
         }
 
-        // ── Question boxes ────────────────────────────────────────────
+        // question boxes
         const questionBoxGroups: [cc.Node, QuestionBoxReward][] = [
             [this.coinQuestionBoxes,  QuestionBoxReward.COIN],
             [this.powerQuestionBoxes, QuestionBoxReward.POWER_MUSHROOM],
@@ -301,18 +282,15 @@ export default class StageController extends cc.Component {
         }
     }
 
-    // ─── Button click handlers (names must match the scene file) ─────
+    // ─── button handlers ──────────────────────────────────────────────
 
-    /** Called by the Pause button in the stage UI. */
     togglePause() {
         this.isPaused = !this.isPaused;
         this.pausableComponents.forEach(body => body.togglePause());
     }
 
-    /** Called by the Restart button in the stage UI. */
     restartCurrentStage() {
         cc.audioEngine.stopAll();
-        // Ensure stageChoice and playMode are valid for the loading screen.
         StageController.stageChoice = this.worldNum;
         if (StageController.playMode.mode === 'None') {
             StageController.playMode = { mode: 'Single' };
@@ -336,7 +314,7 @@ export default class StageController extends cc.Component {
         cc.audioEngine.setEffectsVolume(volume);
     }
 
-    // ─── Key forwarding ───────────────────────────────────────────────
+    // ─── key forwarding ───────────────────────────────────────────────
 
     onKeyDown(event: cc.Event.EventKeyboard) {
         for (const player of Array.from(this.playerRegistry.values())) {
@@ -350,33 +328,24 @@ export default class StageController extends cc.Component {
         }
     }
 
-    // ─── Audio ───────────────────────────────────────────────────────
+    // ─── audio ────────────────────────────────────────────────────────
 
     playSoundEffect(clip: cc.AudioClip) {
         this.currentAudioId = cc.audioEngine.playEffect(clip, false);
     }
 
-    // ─── Timer ───────────────────────────────────────────────────────
+    // ─── timer ────────────────────────────────────────────────────────
 
-    /**
-     * Reset the stage timer.
-     * Pass 'None' to reset for all modes; otherwise only resets when the
-     * current mode matches.
-     */
+    // pass 'None' to reset regardless of current mode
     resetTimerForMode(mode: GameMode) {
         if (mode === 'None' || StageController.playMode.mode === mode) {
             this.stageTimer = StageController.TIMER_START_VALUE;
         }
     }
 
-    // ─── Win / lose ───────────────────────────────────────────────────
+    // ─── win / lose ───────────────────────────────────────────────────
 
-    /**
-     * Respond to a player being hit.
-     *  - If powered-up: power down (no life lost).
-     *  - If normal and lives remain: play death + respawn.
-     *  - If last life: game over.
-     */
+    // powered-up → power down; normal → respawn; last life → game over
     handlePlayerHit(player: PlayerController, ignoreInvincibility: boolean) {
         if (player.isPlayingDeathAnimation || player.isInvincible) return;
         if (!ignoreInvincibility && player.isBigMario) {
@@ -387,7 +356,7 @@ export default class StageController extends cc.Component {
                 this.resetTimerForMode('Single');
             }, 2);
         } else {
-            // Game over — save score then navigate away.
+            // game over
             player.playDeathAnimation(() => {
                 this.saveHighScore();
                 this.scheduleOnce(() => {
@@ -398,7 +367,6 @@ export default class StageController extends cc.Component {
         }
     }
 
-    /** Show the result overlay and transition to the stage-select screen. */
     handleStageComplete() {
         const finalScore = Math.ceil(this.score + Math.ceil(this.stageTimer) * 10);
         this.resScoreLabel.string    = finalScore.toString();
@@ -415,7 +383,6 @@ export default class StageController extends cc.Component {
         this.playSoundEffect(this.levelClearClip);
     }
 
-    /** Persist the best score to local storage (offline, no account required). */
     saveHighScore() {
         const bestScore = Number(
             cc.sys.localStorage.getItem('MARIO_BEST_SCORE') || '0',
@@ -426,7 +393,7 @@ export default class StageController extends cc.Component {
         }
     }
 
-    // ─── Enemy / item initialisation ──────────────────────────────────
+    // ─── enemy / item setup ───────────────────────────────────────────
 
     initializeQuestionBox(box: cc.Component, rewardType: QuestionBoxReward) {
         const rigidBody = box.getComponent(cc.RigidBody);
@@ -444,14 +411,13 @@ export default class StageController extends cc.Component {
             const player = otherCollider.node.getComponent(PlayerController);
             const boxVisual = box.node.getChildByName('QBox');
 
-            // Only respond when the player bumps the box from below.
+            // only fire when bumped from below
             if (!boxVisual.active ||
                 player.isPlayingDeathAnimation ||
                 contact.getWorldManifold().normal.y !== -1) return;
 
             this.score += 100;
 
-            // Animate the box bump.
             const bumpAction = cc.sequence(
                 cc.moveBy(0.1, 0, 5).easing(cc.easeInOut(2)),
                 cc.moveBy(0.1, 0, -5).easing(cc.easeInOut(2)),
@@ -575,7 +541,7 @@ export default class StageController extends cc.Component {
             switch (otherCollider.tag) {
             case CollisionTag.PLAYER:
                 if (contact.getWorldManifold().normal.y === 1) {
-                    // Stomped from above — kill the goomba.
+                    // stomped — kill
                     this.score += 100;
                     const anim = goomba.getComponent(cc.Animation);
                     anim.play('GoombaDead');
@@ -603,19 +569,13 @@ export default class StageController extends cc.Component {
             if (otherCollider.tag === CollisionTag.ENEMY) {
                 contact.disabled = true;
             }
-            // Reverse direction when hitting a wall.
-            // Use > 0.9 (not === 1) to handle near-vertical normals that arise
-            // when the goomba stops at the corner junction between two adjacent
-            // tile colliders — exact equality fails there due to floating point.
+            // reverse on wall contact (> 0.9 tolerates near-vertical tile-corner normals)
             const gNx = contact.getWorldManifold().normal.x;
             if (Math.abs(gNx) > 0.9) {
-                // The target velocity is the direction AWAY from the wall.
                 const targetVx = gNx < 0
                     ? StageController.GOOMBA_SPEED
                     : -StageController.GOOMBA_SPEED;
-                // Only flip when stopped OR moving toward the wall.
-                // (vx * targetVx <= 0 catches both the stopped case and the
-                //  "moving into wall" case without blocking the first contact.)
+                // flip only when stopped or moving toward the wall
                 if (rigidBody.linearVelocity.x * targetVx <= 0) {
                     rigidBody.linearVelocity = cc.v2(
                         targetVx,
@@ -653,12 +613,12 @@ export default class StageController extends cc.Component {
             }
         };
 
-        // Bob the flower up and down continuously.
+        // bob up and down
         const bobAction = cc.sequence(
             cc.moveBy(2, cc.v2(0, 12)),
-            cc.moveBy(2, cc.v2(0, 0)),  // pause at top
+            cc.moveBy(2, cc.v2(0, 0)),
             cc.moveBy(2, cc.v2(0, -12)),
-            cc.moveBy(2, cc.v2(0, 0)),  // pause at bottom
+            cc.moveBy(2, cc.v2(0, 0)),
         ).repeatForever();
         flower.node.runAction(bobAction);
     }
@@ -667,10 +627,10 @@ export default class StageController extends cc.Component {
         const rigidBody = turtle.getComponent(cc.RigidBody);
         rigidBody.linearVelocity = cc.v2(-StageController.TURTLE_WALK_SPEED, 0);
 
-        let isDead       = false;
-        let isSpinning   = false;
+        let isDead        = false;
+        let isSpinning    = false;
         let hasBeenKicked = false;
-        let currentSpeed = StageController.TURTLE_WALK_SPEED;
+        let currentSpeed  = StageController.TURTLE_WALK_SPEED;
 
         rigidBody.onBeginContact = (
             contact: cc.PhysicsContact,
@@ -681,7 +641,7 @@ export default class StageController extends cc.Component {
             case CollisionTag.PLAYER:
                 if (contact.getWorldManifold().normal.y === 1 &&
                         !isDead && !isSpinning) {
-                    // Stomp from above — knock the turtle into its shell.
+                    // stomped — enter shell
                     this.score += 100;
                     const anim = turtle.getComponent(cc.Animation);
                     anim.play('TurtleDead');
@@ -690,12 +650,12 @@ export default class StageController extends cc.Component {
                     rigidBody.linearVelocity = cc.v2(0, rigidBody.linearVelocity.y);
                 } else if (contact.getWorldManifold().normal.y !== 1 &&
                                (!isDead || isSpinning)) {
-                    // Side hit while alive or spinning — hurts the player.
+                    // side hit — hurt player
                     this.handlePlayerHit(
                         otherCollider.node.getComponent(PlayerController), false,
                     );
                 } else {
-                    // Kick the shell into a spin.
+                    // kick shell
                     if (!hasBeenKicked) {
                         this.score += 100;
                         hasBeenKicked = true;
@@ -704,7 +664,7 @@ export default class StageController extends cc.Component {
                     isSpinning = true;
                     currentSpeed = StageController.TURTLE_SHELL_SPEED;
 
-                    // Launch the shell in the direction away from the player.
+                    // launch away from player
                     const shellX = selfCollider.node.convertToWorldSpaceAR(
                         selfCollider.node.getPosition(),
                     ).x;
@@ -721,7 +681,7 @@ export default class StageController extends cc.Component {
 
             case CollisionTag.ENEMY:
                 if (isSpinning) {
-                    // Spinning shell destroys other enemies.
+                    // spinning shell kills enemies
                     otherCollider.enabled = false;
                     otherCollider.sensor  = true;
                     this.score += 100;
@@ -744,11 +704,7 @@ export default class StageController extends cc.Component {
                 contact.disabled = true;
                 return;
             }
-            // Reverse direction on wall contact.
-            // Same fix as the goomba: use > 0.9 threshold to handle near-vertical
-            // normals from tile-corner contacts in Stage 1.
-            // currentSpeed === 0 means the shell was stomped but not kicked yet;
-            // skip reversal in that case so the shell doesn't spontaneously move.
+            // reverse on wall contact; skip when currentSpeed === 0 (stomped shell)
             const tNx = contact.getWorldManifold().normal.x;
             if (Math.abs(tNx) > 0.9 && currentSpeed > 0) {
                 const targetVx = tNx < 0 ? currentSpeed : -currentSpeed;
@@ -756,9 +712,7 @@ export default class StageController extends cc.Component {
                     rigidBody.linearVelocity = cc.v2(
                         targetVx, rigidBody.linearVelocity.y,
                     );
-                    // Flip the sprite to match direction of travel.
-                    // Walking right (+) → scaleX −1 (sprite faces right).
-                    // Walking left  (−) → scaleX +1 (sprite faces left).
+                    // flip sprite to face movement direction (right → scaleX -1)
                     if (!isSpinning) {
                         turtle.node.setScale(
                             cc.v2(targetVx > 0 ? -1 : 1, turtle.node.scaleY),
