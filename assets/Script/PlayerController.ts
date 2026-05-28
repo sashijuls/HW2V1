@@ -1,7 +1,7 @@
 import { CollisionTag } from "../Function/CollisionTag";
 import {
     MovementState, MovementRef,
-    stopAllMovement, endMoveLeft, endMoveRight, endJump,
+    endMoveLeft, endMoveRight, endJump,
     beginMoveLeft, beginMoveRight, beginJump,
 } from "../Function/MovementFlags";
 import { PlayerKeyBindings } from "../Function/InputBindings";
@@ -284,6 +284,7 @@ export default class PlayerController extends cc.Component implements MovementRe
     }
 
     playDeathAnimation(onAnimationFinished?: () => void) {
+        this.isBigMario = false;
         this.getComponent(cc.RigidBody).linearVelocity = cc.v2(0, 1000);
         this.playAnimation('MarioDead');
         this.getComponent(cc.PhysicsCollider).enabled = false;
@@ -350,7 +351,7 @@ export default class PlayerController extends cc.Component implements MovementRe
 
     onBeginContact(
         contact: cc.PhysicsContact,
-        self: cc.PhysicsCollider,
+        _self: cc.PhysicsCollider,
         other: cc.PhysicsCollider,
     ): void {
         switch (other.tag) {
@@ -401,7 +402,7 @@ export default class PlayerController extends cc.Component implements MovementRe
 
     onPreSolve(
         contact: cc.PhysicsContact,
-        self: cc.PhysicsCollider,
+        _self: cc.PhysicsCollider,
         other: cc.PhysicsCollider,
     ): void {
         switch (other.tag) {
@@ -430,8 +431,8 @@ export default class PlayerController extends cc.Component implements MovementRe
     }
 
     onEndContact(
-        contact: cc.PhysicsContact,
-        self: cc.PhysicsCollider,
+        _contact: cc.PhysicsContact,
+        _self: cc.PhysicsCollider,
         other: cc.PhysicsCollider,
     ): void {
         switch (other.tag) {

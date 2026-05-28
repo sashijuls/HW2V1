@@ -8,7 +8,7 @@
   "group-list": [
     "default"
   ],
-  "start-scene": "5a90440a-0ed5-471f-bd6c-7e3fca93cb62",
+  "start-scene": "df147882-54af-4689-9d5f-5cf2b2963412",
   "design-resolution-width": 960,
   "design-resolution-height": 640,
   "fit-width": false,
@@ -20,7 +20,7 @@
     "width": 960,
     "height": 640
   },
-  "last-module-event-record-time": 1684859454967,
+  "last-module-event-record-time": 1779947936662,
   "assets-sort-type": "name",
   "facebook": {
     "enable": false,

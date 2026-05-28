@@ -1275,8 +1275,8 @@
     ],
     "_srcBlendFactor": 770,
     "_dstBlendFactor": 771,
-    "_string": "/",
-    "_N$string": "/",
+    "_string": "!",
+    "_N$string": "!",
     "_fontSize": 15,
     "_lineHeight": 40,
     "_enableWrapText": true,
@@ -1295,7 +1295,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "Waiting",
+    "_name": "Node1",
     "_objFlags": 0,
     "_parent": {
       "__id__": 17
@@ -1392,7 +1392,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "slash",
+    "_name": "Node2",
     "_objFlags": 0,
     "_parent": {
       "__id__": 17
@@ -1487,7 +1487,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "Ok",
+    "_name": "NodeDone",
     "_objFlags": 0,
     "_parent": {
       "__id__": 17
